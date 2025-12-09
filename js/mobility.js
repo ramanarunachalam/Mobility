@@ -889,7 +889,7 @@ function handle_popstate(e) {
 }
 
 function add_history(context, data) {
-    const url = 'movie.html';
+    const url = 'mobility.html';
     data['language'] = window.GOT_LANGUAGE;
     if (!window.indic_popstate) {
         data['context'] = context;
