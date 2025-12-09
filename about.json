@@ -1,0 +1,20 @@
+{
+    "title": {
+        "N": "Stats",
+        "I": "info-circle"
+    },
+    "stats": [
+        {
+            "H": "bus stops",
+            "C": 9438
+        },
+        {
+            "H": "bus routes",
+            "C": 7310
+        },
+        {
+            "H": "metro stations",
+            "C": 95
+        }
+    ]
+}
