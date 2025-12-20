@@ -7,9 +7,10 @@ const KBD_TOOLTIP = 'Language Keyboard';
 
 const VIDEO_INFO_KEY_LIST = new Set([ 'title', 'author_name' ]);
 
-const CATEGORY_DICT = { 'categories' : [ { 'C' : 'busstop',  'I' : 'bus-front',        'N' : 'Bus Stop'   },
-                                         { 'C' : 'busroute', 'I' : 'arrow-left-right', 'N' : 'Bus Route' },
-                                         { 'C' : 'about',    'I' : 'info-circle',      'N' : 'About'    },
+const CATEGORY_DICT = { 'categories' : [ { 'C' : 'busstop',    'I' : 'signpost',    'N' : 'Bus Stop'   },
+                                         { 'C' : 'busroute',   'I' : 'repeat',      'N' : 'Bus Route' },
+                                         { 'C' : 'nammametro', 'I' : 'train-front', 'N' : 'Namma Metro' },
+                                         { 'C' : 'about',      'I' : 'info-circle', 'N' : 'About'    },
                                        ]
                       };
 
@@ -409,13 +410,22 @@ function create_osm_map(module, c_lat, c_long, zoom, min_zoom) {
 }
 
 function create_marker_icons() {
-    window.start_stop_marker = L.AwesomeMarkers.icon({ icon: 'home', markerColor: 'green' });
-    window.end_stop_marker = L.AwesomeMarkers.icon({ icon: 'home', markerColor: 'red' });
+    window.nammametro_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'blue', prefix: 'fa', iconColor: 'white' });
+    window.busstop_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'blue', prefix: 'fa', iconColor: 'white' });
+    window.neighbor_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'purple', prefix: 'fa', iconColor: 'white' });
+    window.start_stop_marker = L.AwesomeMarkers.icon({ icon: 'play-circle-o', markerColor: 'orange', prefix: 'fa', iconColor: 'white' });
+    window.end_stop_marker = L.AwesomeMarkers.icon({ icon: 'stop-circle', markerColor: 'green', prefix: 'fa', iconColor: 'white' });
 }
 
-function add_marker(h_id, m_lat, m_long) {
+function marker_on_doubleclick(e) {
+    const marker = e.target;
+    load_content_data(marker.category, marker.h_id);
+}
+
+function add_marker(category, h_id, m_lat, m_long) {
     const marker = new L.marker([m_lat, m_long]);
     marker.state = 'new';
+    marker.category = category;
     marker.h_id = h_id;
     const center = window.map_osm_map.getCenter();
     marker.distance = center.distanceTo(marker.getLatLng());
@@ -423,9 +433,9 @@ function add_marker(h_id, m_lat, m_long) {
     marker.on('mouseover', marker_on_mouseover);
     marker.on('mouseout', marker_on_mouseout);
     marker.on('click', marker_on_click);
-    marker.on('dblclick', marker_on_doubleclick);
     marker.on('contextmenu', marker_on_contextmenu);
     */
+    marker.on('dblclick', marker_on_doubleclick);
     return marker;
 }
 
@@ -458,7 +468,7 @@ function render_content_data(category, h_id, video_data, context_list) {
             obj['T'] = obj['time'][window.CONTENT_INDEX];
             new_data['data'].push(obj);
             stop_obj = stop_data['data'][stop_id]['info'];
-            latlong_list.push([ stop_obj['lat'], stop_obj['lon'] ]);
+            latlong_list.push([ stop_obj['lat'], stop_obj['lon'], stop_id ]);
         }
         const obj = data_list[h_id][0];
         time_list = [];
@@ -477,25 +487,39 @@ function render_content_data(category, h_id, video_data, context_list) {
     if (category === 'busstop') {
         const info_data = video_data['data'][h_id]['info'];
         setTimeout(() => {
-            osm_map = create_osm_map('area', info_data['lat'], info_data['lon'], 12, 12);
-            const marker = add_marker(h_id, info_data['lat'], info_data['lon']);
+            osm_map = create_osm_map('area', info_data['lat'], info_data['lon'], AREA_MIN_ZOOM, MIN_ZOOM);
+            const marker = add_marker(category, h_id, info_data['lat'], info_data['lon']);
+            marker.setIcon(window.busstop_marker);
             window.map_osm_layer.addLayer(marker);
             for (const m_id of info_data['neighbor']) {
                 const i_data = stop_data['data'][m_id]['info'];
-                const marker = add_marker(h_id, i_data['lat'], i_data['lon']);
-                //, { icon: window.end_stop_marker });
-                marker.setIcon(window.end_stop_marker);
+                const marker = add_marker('busstop', m_id, i_data['lat'], i_data['lon']);
+                marker.setIcon(window.neighbor_marker);
                 window.map_osm_layer.addLayer(marker);
             }
         }, 0); 
-    }
-    if (category === 'busroute') {
+    } else if (category === 'busroute') {
         setTimeout(() => {
-            osm_map = create_osm_map('area', latlong_list[0][0], latlong_list[0][1], 12, 12);
+            osm_map = create_osm_map('area', latlong_list[0][0], latlong_list[0][1], MIN_ZOOM, MIN_ZOOM);
             for (i = 0; i < latlong_list.length; i++) {
-                const marker = add_marker(h_id, latlong_list[i][0], latlong_list[i][1]);
+                const marker = add_marker('busstop', latlong_list[i][2], latlong_list[i][0], latlong_list[i][1]);
                 if (i == 0) marker.setIcon(window.start_stop_marker);
-                if (i == latlong_list.length - 1) marker.setIcon(window.end_stop_marker);
+                else if (i == latlong_list.length - 1) marker.setIcon(window.end_stop_marker);
+                else marker.setIcon(window.busstop_marker);
+                window.map_osm_layer.addLayer(marker);
+            }
+        }, 0); 
+    } else if (category === 'nammametro') {
+        const info_data = video_data['data'][h_id];
+        setTimeout(() => {
+            osm_map = create_osm_map('area', info_data['lat'], info_data['lon'], AREA_MIN_ZOOM, MIN_ZOOM);
+            const marker = add_marker(category, h_id, info_data['lat'], info_data['lon']);
+            marker.setIcon(window.nammametro_marker);
+            window.map_osm_layer.addLayer(marker);
+            for (const m_id of info_data['neighbor']) {
+                const i_data = stop_data['data'][m_id]['info'];
+                const marker = add_marker('busstop', m_id, i_data['lat'], i_data['lon']);
+                marker.setIcon(window.neighbor_marker);
                 window.map_osm_layer.addLayer(marker);
             }
         }, 0); 
@@ -713,14 +737,15 @@ function load_content_data(category, h_id, element, new_context_list) {
 
     url_data = null;
     if (category === 'busstop') url_data = window.STOP_DATA;
-    if (category === 'busroute') url_data = window.ROUTE_DATA;
+    else if (category === 'busroute') url_data = window.ROUTE_DATA;
+    else if (category === 'nammametro') url_data = window.METRO_DATA;
     render_content_data(category, h_id, url_data, new_context_list);
     add_history('content', { 'category' : category, 'name' : h_id });
 }
 
 function load_init_data(data_set_list) {
     const lang = window.RENDER_LANGUAGE;
-    const [ id_data, about_data, lang_data, stop_data, route_data ] = data_set_list;
+    const [ id_data, about_data, lang_data, stop_data, route_data, metro_data ] = data_set_list;
     if (window.innerWidth < 992) {
         show_modal_dialog(...VIEW_IN_LANDSCAPE_MSG)
     }
@@ -732,6 +757,7 @@ function load_init_data(data_set_list) {
     window.LANG_DATA = lang_data;
     window.STOP_DATA = stop_data;
     window.ROUTE_DATA = route_data;
+    window.METRO_DATA = metro_data;
     load_menu_data(lang, START_NAV_CATEGORY);
     //if (window.default_video !== '') load_content_data(C_SINGLE, window.default_video);
     search_init();
@@ -945,7 +971,8 @@ function collection_init(collection, default_video) {
                        fetch_url_data('ABOUT DATA', 'about.json'),
                        fetch_url_data('LANG DATA', `${l_lang}_map.json`),
                        fetch_url_data('STOP DATA', `data/busstop.json`),
-                       fetch_url_data('ROUTE DATA', `data/busroute.json`)
+                       fetch_url_data('ROUTE DATA', `data/busroute.json`),
+                       fetch_url_data('METRO DATA', `data/nammametro.json`)
                      ];
     Promise.all(url_list).then((data_set_list) => { load_init_data(data_set_list); });
 }

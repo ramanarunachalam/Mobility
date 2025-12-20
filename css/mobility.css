@@ -65,7 +65,7 @@ a:not([class*="btn"]):hover {
 }
 
 .SCROLL_TABLE {
-  max-height: 500px;
+  max-height: 400px;
   overflow-y: scroll;
 }
 
