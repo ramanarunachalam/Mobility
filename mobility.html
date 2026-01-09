@@ -172,10 +172,34 @@
     </script>
 
     <script type="text/html" id="page-busstop-template">
-      <div class="px-4 SCROLL_TABLE">
+      <form class="row px-4 align-items-center">
+        {{#picker}}
+        {{#title}}
+        <div class="col-auto align-middle">
+          <b><i>{{value}}:</i></b>
+        </div>
+        {{/title}}
+        <div class="col-auto">
+          <select id="{{name}}" class="form-select" aria-label="{{name}}">
+            {{#options}}
+            <option {{selected}}>{{value}}</option>
+            {{/options}}
+          </select>
+          </td>
+        </div>
+        {{#title}}
+        <div class="col-auto"><b>:</b></div>
+        {{/title}}
+        {{/picker}}
+        <div class="col-auto">
+          <button type="button" class="btn btn-light" onclick="form_submit();">Filter</button>
+        </div>
+      </form>
+
+      <div class="px-4 py-2 SCROLL_TABLE">
         <table border="0" cellpadding="0" class="table table-bordered table-hover table-condensed w-auto" >
-          <tbody>
-              <tr><th>Time</th><th>Route</th><th>Origin &#x21D4; Destination</th></tr>
+          <tbody id="time_table">
+            <tr><th>Time</th><th>Route</th><th>Origin &#x21D4; Destination</th></tr>
             {{#data}}
             <tr><td>{{T}}</td><td>{{R}}</td><td><em>{{N}}</em></td></tr>
             {{/data}}
@@ -185,6 +209,7 @@
 
       <div class="p-2">
       <div id="MAPINFO" class="p-2">
+      </div>
     </script>
 
     <script type="text/html" id="page-busroute-template">
@@ -224,10 +249,12 @@
 
       <div class="p-2">
       <div id="MAPINFO" class="p-2">
+      </div>
     </script>
 
     <script type="text/html" id="page-nammametro-template">
       <div id="MAPINFO" class="p-2">
+      </div>
     </script>
 
     <script type="text/html" id="page-about-template">

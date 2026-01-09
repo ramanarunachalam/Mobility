@@ -362,10 +362,27 @@ function get_match_count(f_category, f_value, context_list, c_len) {
     return found;
 }
 
+function get_opt_value(name, value) {
+    const a = [];
+    for (i = 0; i < value; i++) {
+        const j = (i < 10) ? `0${i}` : `${i}`;
+        const item = (name === 'End' && i === value - 1) ? { 'value' : j, 'selected' : 'selected' } : { 'value' : j };
+        a.push(item);
+    }
+    return a
+}
+
 function render_data_template(category, id, data, context_list) {
     const lang = window.RENDER_LANGUAGE;
     if (category === '') return;
     const template_name = `page-${category}-template`;
+    if (category === 'busstop') {
+        data['picker'] = [];
+        data['picker'].push({ 'name' : 'starthour', 'title' : { 'value' : 'Start' }, 'options' : get_opt_value('Start', 24) });
+        data['picker'].push({ 'name' : 'startmin', 'options' : get_opt_value('Start', 60) });
+        data['picker'].push({ 'name' : 'endhour', 'title' : { 'value' : 'End' }, 'options' : get_opt_value('End', 24) });
+        data['picker'].push({ 'name' : 'endmin', 'options' : get_opt_value('End', 60) });
+    }
     let ul_template = plain_get_html_text(template_name);
     const template_html = Mustache.render(ul_template, data);
     plain_set_html_text(id, template_html);
@@ -410,11 +427,13 @@ function create_osm_map(module, c_lat, c_long, zoom, min_zoom) {
 }
 
 function create_marker_icons() {
-    window.nammametro_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'blue', prefix: 'fa', iconColor: 'white' });
-    window.busstop_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'blue', prefix: 'fa', iconColor: 'white' });
-    window.neighbor_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'purple', prefix: 'fa', iconColor: 'white' });
-    window.start_stop_marker = L.AwesomeMarkers.icon({ icon: 'play-circle-o', markerColor: 'orange', prefix: 'fa', iconColor: 'white' });
-    window.end_stop_marker = L.AwesomeMarkers.icon({ icon: 'stop-circle', markerColor: 'green', prefix: 'fa', iconColor: 'white' });
+    //L.AwesomeMarkers.Icon.prototype.options.prefix = 'fa';
+    window.nammametro_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'blue', prefix: 'fa' });
+    window.busstop_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'blue', prefix: 'fa' });
+    window.stop_neighbor_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'purple', prefix: 'fa' });
+    window.metro_neighbor_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'beige', prefix: 'fa' });
+    window.start_stop_marker = L.AwesomeMarkers.icon({ icon: 'play-circle-o', markerColor: 'orange', prefix: 'fa' });
+    window.end_stop_marker = L.AwesomeMarkers.icon({ icon: 'stop-circle', markerColor: 'green', prefix: 'fa' });
 }
 
 function marker_on_doubleclick(e) {
@@ -446,6 +465,8 @@ function render_content_data(category, h_id, video_data, context_list) {
 
     const stop_data = window.STOP_DATA;
     const route_data = window.window.ROUTE_DATA;;
+    const metro_data = window.window.METRO_DATA;;
+
     const new_data = { 'data' : [] };
     const latlong_list = [];
     if (category === 'busstop') {
@@ -491,11 +512,19 @@ function render_content_data(category, h_id, video_data, context_list) {
             const marker = add_marker(category, h_id, info_data['lat'], info_data['lon']);
             marker.setIcon(window.busstop_marker);
             window.map_osm_layer.addLayer(marker);
-            for (const m_id of info_data['neighbor']) {
+            for (const m_id of info_data['stops']) {
                 const i_data = stop_data['data'][m_id]['info'];
                 const marker = add_marker('busstop', m_id, i_data['lat'], i_data['lon']);
-                marker.setIcon(window.neighbor_marker);
+                marker.setIcon(window.stop_neighbor_marker);
                 window.map_osm_layer.addLayer(marker);
+            }
+            if (info_data['metros'] !== undefined) {
+                for (const m_id of info_data['metros']) {
+                    const i_data = metro_data['data'][m_id];
+                    const marker = add_marker('nammametro', m_id, i_data['lat'], i_data['lon']);
+                    marker.setIcon(window.metro_neighbor_marker);
+                    window.map_osm_layer.addLayer(marker);
+                }
             }
         }, 0); 
     } else if (category === 'busroute') {
@@ -516,14 +545,50 @@ function render_content_data(category, h_id, video_data, context_list) {
             const marker = add_marker(category, h_id, info_data['lat'], info_data['lon']);
             marker.setIcon(window.nammametro_marker);
             window.map_osm_layer.addLayer(marker);
-            for (const m_id of info_data['neighbor']) {
+            for (const m_id of info_data['stops']) {
                 const i_data = stop_data['data'][m_id]['info'];
                 const marker = add_marker('busstop', m_id, i_data['lat'], i_data['lon']);
-                marker.setIcon(window.neighbor_marker);
+                marker.setIcon(window.stop_neighbor_marker);
                 window.map_osm_layer.addLayer(marker);
             }
         }, 0); 
     }
+}
+
+function form_submit() {
+    console.log('Form Submit');
+    const start_hour = document.getElementById('starthour');
+    const start_min = document.getElementById('startmin');
+    const end_hour = document.getElementById('endhour');
+    const end_min = document.getElementById('endmin');
+    const [ sh, sm, eh, em ] = [ +start_hour.value, +start_min.value, +end_hour.value, +end_min.value ]; 
+    // console.log(sh, sm, eh, em);
+
+    const html_str = "<tr><th>Time</th><th>Route</th><th>Origin &#x21D4; Destination</th></tr> {{#data}} <tr><td>{{T}}</td><td>{{R}}</td><td><em>{{N}}</em></td></tr> {{/data}}";
+
+    const h_id = window.CONTENT_NAME;
+    const route_data = window.ROUTE_DATA;
+    const stop_data = window.STOP_DATA;
+    const data = { 'data' : [] };
+    const data_list = stop_data['data'];
+    for (const obj of data_list[h_id]['routes']) {
+        const route_id = obj['id'];
+        const t = obj['time'];
+        var [h, m, s] = t.split(':');
+        h = parseInt(h);
+        m = parseInt(m);
+        if ((h < sh) || (h > eh)) continue; 
+        if ((m < sm) || (m > em)) continue; 
+        obj['T'] = t;
+        r_text = get_phonetic_text('busroute', route_id);
+        obj['N'] = r_text.split(' : ')[1];
+        obj['R'] = r_text.split(' : ')[0];
+        route_obj = route_data['data'][route_id]['info'];
+        data['data'].push(obj);
+    }
+    const table_body = document.getElementById('time_table');
+    table_body.innerHTML = Mustache.render(html_str, data)
+    return false;
 }
 
 function load_context_search_data(context_list) {
