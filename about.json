@@ -6,11 +6,11 @@
     "stats": [
         {
             "H": "bus stops",
-            "C": 9438
+            "C": 9449
         },
         {
             "H": "bus routes",
-            "C": 7310
+            "C": 7275
         },
         {
             "H": "metro stations",

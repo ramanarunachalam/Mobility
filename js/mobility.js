@@ -7,10 +7,10 @@ const KBD_TOOLTIP = 'Language Keyboard';
 
 const VIDEO_INFO_KEY_LIST = new Set([ 'title', 'author_name' ]);
 
-const CATEGORY_DICT = { 'categories' : [ { 'C' : 'busstop',    'I' : 'signpost',    'N' : 'Bus Stop'   },
-                                         { 'C' : 'busroute',   'I' : 'repeat',      'N' : 'Bus Route' },
+const CATEGORY_DICT = { 'categories' : [ { 'C' : 'busstop',    'I' : 'signpost',    'N' : 'Bus Stop'    },
+                                         { 'C' : 'busroute',   'I' : 'repeat',      'N' : 'Bus Route'   },
                                          { 'C' : 'nammametro', 'I' : 'train-front', 'N' : 'Namma Metro' },
-                                         { 'C' : 'about',      'I' : 'info-circle', 'N' : 'About'    },
+                                         { 'C' : 'about',      'I' : 'info-circle', 'N' : 'About'       },
                                        ]
                       };
 
@@ -178,13 +178,15 @@ function get_month_text(value) {
 }
 
 function load_menu_data(lang, nav_category) {
-    //transliterator_lang_init(lang);
-
+    /*
+    transliterator_lang_init(lang);
     const item_list = CATEGORY_DICT['categories'];
     for (const obj of item_list) {
         const name = capitalize_word(obj['C']);
         obj['N'] = get_map_text('info', name);
     }
+    */
+
     const search = get_map_text('info', 'Search');
     const lang_map_dict = window.LANG_DATA['map']['language'];
     const lang_list = [];
@@ -436,6 +438,10 @@ function create_marker_icons() {
     window.end_stop_marker = L.AwesomeMarkers.icon({ icon: 'stop-circle', markerColor: 'green', prefix: 'fa' });
 }
 
+function marker_on_mouseover() {
+    this.openPopup();
+}
+
 function marker_on_doubleclick(e) {
     const marker = e.target;
     load_content_data(marker.category, marker.h_id);
@@ -448,13 +454,25 @@ function add_marker(category, h_id, m_lat, m_long) {
     marker.h_id = h_id;
     const center = window.map_osm_map.getCenter();
     marker.distance = center.distanceTo(marker.getLatLng());
-    /*
+    const item_list = CATEGORY_DICT['categories'];
+    var c_name = category;
+    for (const obj of item_list) {
+        if (obj['C'] === category) {
+            c_name = obj['N'];
+            break;
+        }
+    }
+    const name = get_phonetic_text(category, h_id);
+    const text = `${c_name} : ${name}`;
+    const popup = L.popup().setContent(text);
+    marker.bindPopup(popup);
     marker.on('mouseover', marker_on_mouseover);
+    marker.on('dblclick', marker_on_doubleclick);
+    /*
     marker.on('mouseout', marker_on_mouseout);
     marker.on('click', marker_on_click);
     marker.on('contextmenu', marker_on_contextmenu);
     */
-    marker.on('dblclick', marker_on_doubleclick);
     return marker;
 }
 
