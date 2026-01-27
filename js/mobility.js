@@ -14,6 +14,9 @@ const CATEGORY_DICT = { 'categories' : [ { 'C' : 'busstop',    'I' : 'signpost',
                                        ]
                       };
 
+const [ H_STOP, H_METRO, H_ROUTE ] = [...Array(3).keys()];
+const CATEGORY_LIST = [ 'busstop', 'nammametro', 'busroute' ];
+
 const START_NAV_CATEGORY = 'busstop';
 
 LINK_ACTIVE_BUTTON = 2
@@ -406,8 +409,123 @@ function get_geocoder_nominatim() {
     return nominatim;
 }
 
-function create_osm_map(module, c_lat, c_long, zoom, min_zoom) {
-    const map_options  = { center: [ c_lat, c_long ],
+function clear_layers() {
+    if (!window.map_initialized) return;
+    window.map_osm_layer.clearLayers();
+}
+
+function add_new_marker(h_name, h_id, m_lat, m_lon) {
+    let marker = window.area_marker_dict[[h_name, h_id]];
+    if (marker === undefined) {
+        marker = add_marker(h_name, h_id, m_lat, m_lon);
+        marker.state = 'new';
+    } else {
+        marker.state = 'old';
+    }
+    return marker;
+}
+
+async function draw_area_map(c_lat, c_lon) {
+    const category = window.map_category;
+    clear_layers();
+
+    const area_marker_dict = {};
+    for (i = 0; i < window.area_marker_list.length; i++) {
+        const [ h_name, h_id, h_lat, h_lon ] = window.area_marker_list[i];
+        const marker = add_new_marker(h_name, h_id, h_lat, h_lon);
+        if (category === 'busstop') {
+            marker.setIcon(window.busstop_marker);
+        } else if (category === 'busroute') {
+            if (i == 0) marker.setIcon(window.start_stop_marker);
+            else if (i == window.area_marker_list.length - 1) marker.setIcon(window.end_stop_marker);
+            else marker.setIcon(window.busstop_marker);
+        } else if (category === 'nammametro') {
+            marker.setIcon(window.nammametro_marker);
+        }
+        area_marker_dict[[h_name, h_id]] = marker;
+    }
+    // console.log('draw_area_map:', category, Object.keys(area_marker_dict).length);
+    
+    const osm_map = window.map_osm_map;
+    const bounds = osm_map.getBounds();
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const point_list = quad_tree_find(window.quad_tree, sw.lat, sw.lng, ne.lat, ne.lng);
+    let old_count = 0;
+    let new_count = 0; 
+    for (const point of point_list) {
+        const [ m_lat, m_lon, h_name, h_id ] = point;
+        const marker = add_new_marker(h_name, h_id, m_lat, m_lon);
+        area_marker_dict[[h_name, h_id]] = marker;
+        if (marker.state === 'old') {
+            old_count++;
+        } else if (marker.state === 'new') {
+            new_count++;
+            if (h_name == H_STOP) marker.setIcon(window.stop_neighbor_marker);
+            else if (h_name == H_METRO) marker.setIcon(window.metro_neighbor_marker);
+        }
+    }
+    for (const ll in window.area_marker_dict) {
+        const marker = window.area_marker_dict[ll];
+        if (area_marker_dict[ll] === undefined) window.map_osm_layer.removeLayer(marker);
+    }
+    for (const ll in area_marker_dict) {
+        const marker = area_marker_dict[ll];
+        window.map_osm_layer.addLayer(marker);
+    }
+    window.area_marker_dict = area_marker_dict;
+    // console.log('draw_area_map:', point_list.length, Object.keys(window.area_marker_dict).length, old_count, new_count);
+}
+
+function draw_map_on_move(ev) {
+    if (window.map_area_click) return;
+    const osm_map = window.map_osm_map;
+    const latlong = osm_map.getCenter();
+    window.map_area_move = true;
+    setTimeout(() => {
+        draw_area_map(latlong.lat, latlong.lng);
+        window.map_area_move = false;
+    }, 0);
+}
+
+function handle_geocoder_mark(ev) {
+    draw_map_on_move(ev);
+}
+
+function create_quad_tree() {
+    const quad_tree = d3.quadtree();
+    const stop_data = window.STOP_DATA['data'];
+    for (const stop_id in stop_data) {
+        const info_data = stop_data[stop_id]['info'];
+        quad_tree.add([info_data['lat'], info_data['lon'], H_STOP, +stop_id]);
+    }
+    const metro_data = window.METRO_DATA['data'];
+    for (const metro_id in metro_data) {
+        const info_data = metro_data[metro_id];
+        quad_tree.add([info_data['lat'], info_data['lon'], H_METRO, +metro_id]);
+    }
+    //console.log('Quad Tree:', quad_tree.size());
+    return quad_tree;
+}
+
+function quad_tree_find(quad_tree, xmin, ymin, xmax, ymax) {
+    const results = [];
+    quad_tree.visit((node, x1, y1, x2, y2) => {
+        if (!node.length) {
+            do {
+                const [ dLat, dLong, dTreeId ] = node.data;
+                if (xmin <= dLat && dLat < xmax && ymin <= dLong && dLong < ymax) {
+                    results.push(node.data);
+                }
+            } while (node = node.next);
+        }
+        return (x1 >= xmax || y1 >= ymax || x2 < xmin || y2 < ymin);
+    });
+    return results;
+}
+
+function create_osm_map(module, c_lat, c_lon, zoom, min_zoom) {
+    const map_options  = { center: [ c_lat, c_lon ],
                            rotate: true,
                            touchRotate: true,
                            doubleClickZoom: false,
@@ -416,7 +534,7 @@ function create_osm_map(module, c_lat, c_long, zoom, min_zoom) {
                            maxZoom: MAX_ZOOM
                          };
     const osm_map = new L.map('MAPINFO', map_options);
-    // osm_map.on('zoomend dragend', draw_map_on_move);
+    osm_map.on('zoomend dragend', draw_map_on_move);
     window.map_osm_map = osm_map;
     window.map_osm_layer = new L.LayerGroup();
     osm_map.addLayer(window.map_osm_layer);
@@ -424,7 +542,8 @@ function create_osm_map(module, c_lat, c_long, zoom, min_zoom) {
     tile_layer.addTo(osm_map);
     const geocoder = new L.Control.geocoder({ geocoder: get_geocoder_nominatim() });
     geocoder.addTo(osm_map);
-    // if (module === 'area') geocoder.on('finishgeocode', handle_geocoder_mark);
+    if (module === 'area') geocoder.on('finishgeocode', handle_geocoder_mark);
+    window.map_initialized = true;
     return osm_map;
 }
 
@@ -447,10 +566,12 @@ function marker_on_doubleclick(e) {
     load_content_data(marker.category, marker.h_id);
 }
 
-function add_marker(category, h_id, m_lat, m_long) {
-    const marker = new L.marker([m_lat, m_long]);
+function add_marker(h_name, h_id, m_lat, m_lon) {
+    const category = CATEGORY_LIST[h_name];
+    const marker = new L.marker([m_lat, m_lon]);
     marker.state = 'new';
     marker.category = category;
+    marker.h_name = h_name;
     marker.h_id = h_id;
     const center = window.map_osm_map.getCenter();
     marker.distance = center.distanceTo(marker.getLatLng());
@@ -485,6 +606,7 @@ function render_content_data(category, h_id, video_data, context_list) {
     const route_data = window.window.ROUTE_DATA;;
     const metro_data = window.window.METRO_DATA;;
 
+    window.map_category = category;
     const new_data = { 'data' : [] };
     const latlong_list = [];
     if (category === 'busstop') {
@@ -523,54 +645,32 @@ function render_content_data(category, h_id, video_data, context_list) {
     }
     render_data_template(category, 'PAGE_DATA', new_data, context_list);
 
+    const area_marker_list = [];
+    let [ c_lat, c_lon ] = [ BANGALORE_LAT, BANGALORE_LONG ];
+    let c_zoom = AREA_MIN_ZOOM;
     if (category === 'busstop') {
         const info_data = video_data['data'][h_id]['info'];
-        setTimeout(() => {
-            osm_map = create_osm_map('area', info_data['lat'], info_data['lon'], AREA_MIN_ZOOM, MIN_ZOOM);
-            const marker = add_marker(category, h_id, info_data['lat'], info_data['lon']);
-            marker.setIcon(window.busstop_marker);
-            window.map_osm_layer.addLayer(marker);
-            for (const m_id of info_data['stops']) {
-                const i_data = stop_data['data'][m_id]['info'];
-                const marker = add_marker('busstop', m_id, i_data['lat'], i_data['lon']);
-                marker.setIcon(window.stop_neighbor_marker);
-                window.map_osm_layer.addLayer(marker);
-            }
-            if (info_data['metros'] !== undefined) {
-                for (const m_id of info_data['metros']) {
-                    const i_data = metro_data['data'][m_id];
-                    const marker = add_marker('nammametro', m_id, i_data['lat'], i_data['lon']);
-                    marker.setIcon(window.metro_neighbor_marker);
-                    window.map_osm_layer.addLayer(marker);
-                }
-            }
-        }, 0); 
+        c_lat = info_data['lat'];
+        c_lon = info_data['lon'];
+        area_marker_list.push([H_STOP, h_id, c_lat, c_lon]);
     } else if (category === 'busroute') {
-        setTimeout(() => {
-            osm_map = create_osm_map('area', latlong_list[0][0], latlong_list[0][1], MIN_ZOOM, MIN_ZOOM);
-            for (i = 0; i < latlong_list.length; i++) {
-                const marker = add_marker('busstop', latlong_list[i][2], latlong_list[i][0], latlong_list[i][1]);
-                if (i == 0) marker.setIcon(window.start_stop_marker);
-                else if (i == latlong_list.length - 1) marker.setIcon(window.end_stop_marker);
-                else marker.setIcon(window.busstop_marker);
-                window.map_osm_layer.addLayer(marker);
-            }
-        }, 0); 
+        c_lat = latlong_list[0][0];
+        c_lon = latlong_list[0][1];
+        for (i = 0; i < latlong_list.length; i++) {
+            const [ b_lat, b_lon, b_id ] = latlong_list[i];
+            area_marker_list.push([H_STOP, b_id, b_lat, b_lon]);
+        }
     } else if (category === 'nammametro') {
         const info_data = video_data['data'][h_id];
-        setTimeout(() => {
-            osm_map = create_osm_map('area', info_data['lat'], info_data['lon'], AREA_MIN_ZOOM, MIN_ZOOM);
-            const marker = add_marker(category, h_id, info_data['lat'], info_data['lon']);
-            marker.setIcon(window.nammametro_marker);
-            window.map_osm_layer.addLayer(marker);
-            for (const m_id of info_data['stops']) {
-                const i_data = stop_data['data'][m_id]['info'];
-                const marker = add_marker('busstop', m_id, i_data['lat'], i_data['lon']);
-                marker.setIcon(window.stop_neighbor_marker);
-                window.map_osm_layer.addLayer(marker);
-            }
-        }, 0); 
+        c_lat = info_data['lat'];
+        c_lon = info_data['lon'];
+        area_marker_list.push([H_METRO, h_id, info_data['lat'], info_data['lon']]);
     }
+    window.area_marker_list = area_marker_list;
+    setTimeout(() => {
+        window.map_osm_map = create_osm_map('area', c_lat, c_lon, c_zoom, MIN_ZOOM);
+        draw_area_map(c_lat, c_lon);
+    }, 0); 
 }
 
 function form_submit() {
@@ -846,6 +946,7 @@ function load_init_data(data_set_list) {
     search_init();
 
     create_marker_icons();
+    window.quad_tree = create_quad_tree();
 }
 
 async function fetch_url_data(name, url, args) {
@@ -1020,6 +1121,13 @@ function collection_init(collection, default_video) {
     const [ lang, got_lang ] = LANG_PARAMS;
     window.collection_name = collection;
     window.default_video = default_video;
+
+    window.map_category = H_STOP;
+    window.map_initialized = false;
+    window.map_area_move = false;
+    window.map_area_click = false;
+    window.area_marker_list = [];
+    window.area_marker_dict = {};
 
     const elements = document.getElementsByTagName('html');
     window.COLOR_SCHEME = elements[0].getAttribute('data-bs-theme');
