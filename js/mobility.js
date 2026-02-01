@@ -1,5 +1,6 @@
 const LANG_PARAMS = [ 'English', 'English' ];
 const HISTORY_TITLE = 'BMTC';
+const DEFAULT_METRO_NAME = 'Nadaprabhu Kempegowda Station, Majestic';
 
 const SEARCH_TOOLTIP = 'Prefix Search <br/> e.g. shiva bus <br/> Phonetic Search <br/> e.g. jivaji <br/> Language Search <br/> e.g. <br/> Context Search <br/> e.g. shivaji : 112';
 const MIC_TOOLTIP = 'Only in Chrome';
@@ -414,17 +415,6 @@ function clear_layers() {
     window.map_osm_layer.clearLayers();
 }
 
-function add_new_marker(h_name, h_id, m_lat, m_lon) {
-    let marker = window.area_marker_dict[[h_name, h_id]];
-    if (marker === undefined) {
-        marker = add_marker(h_name, h_id, m_lat, m_lon);
-        marker.state = 'new';
-    } else {
-        marker.state = 'old';
-    }
-    return marker;
-}
-
 async function draw_area_map(c_lat, c_lon) {
     const category = window.map_category;
     clear_layers();
@@ -433,6 +423,7 @@ async function draw_area_map(c_lat, c_lon) {
     for (i = 0; i < window.area_marker_list.length; i++) {
         const [ h_name, h_id, h_lat, h_lon ] = window.area_marker_list[i];
         const marker = add_new_marker(h_name, h_id, h_lat, h_lon);
+        marker.state = 'fixed';
         if (category === 'busstop') {
             marker.setIcon(window.busstop_marker);
         } else if (category === 'busroute') {
@@ -446,6 +437,8 @@ async function draw_area_map(c_lat, c_lon) {
     }
     // console.log('draw_area_map:', category, Object.keys(area_marker_dict).length);
     
+    const old_marker_dict = window.area_marker_dict;
+    window.area_marker_dict = area_marker_dict;
     const osm_map = window.map_osm_map;
     const bounds = osm_map.getBounds();
     const sw = bounds.getSouthWest();
@@ -465,6 +458,8 @@ async function draw_area_map(c_lat, c_lon) {
             else if (h_name == H_METRO) marker.setIcon(window.metro_neighbor_marker);
         }
     }
+    window.area_marker_dict = old_marker_dict;
+
     for (const ll in window.area_marker_dict) {
         const marker = window.area_marker_dict[ll];
         if (area_marker_dict[ll] === undefined) window.map_osm_layer.removeLayer(marker);
@@ -550,9 +545,9 @@ function create_osm_map(module, c_lat, c_lon, zoom, min_zoom) {
 function create_marker_icons() {
     //L.AwesomeMarkers.Icon.prototype.options.prefix = 'fa';
     window.nammametro_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'blue', prefix: 'fa' });
+    window.metro_neighbor_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'beige', prefix: 'fa' });
     window.busstop_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'blue', prefix: 'fa' });
     window.stop_neighbor_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'purple', prefix: 'fa' });
-    window.metro_neighbor_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'beige', prefix: 'fa' });
     window.start_stop_marker = L.AwesomeMarkers.icon({ icon: 'play-circle-o', markerColor: 'orange', prefix: 'fa' });
     window.end_stop_marker = L.AwesomeMarkers.icon({ icon: 'stop-circle', markerColor: 'green', prefix: 'fa' });
 }
@@ -594,6 +589,17 @@ function add_marker(h_name, h_id, m_lat, m_lon) {
     marker.on('click', marker_on_click);
     marker.on('contextmenu', marker_on_contextmenu);
     */
+    return marker;
+}
+
+function add_new_marker(h_name, h_id, m_lat, m_lon) {
+    let marker = window.area_marker_dict[[h_name, h_id]];
+    if (marker === undefined) {
+        marker = add_marker(h_name, h_id, m_lat, m_lon);
+        marker.state = 'new';
+    } else {
+        marker.state = 'old';
+    }
     return marker;
 }
 
@@ -942,7 +948,7 @@ function load_init_data(data_set_list) {
     window.ROUTE_DATA = route_data;
     window.METRO_DATA = metro_data;
     load_menu_data(lang, START_NAV_CATEGORY);
-    //if (window.default_video !== '') load_content_data(C_SINGLE, window.default_video);
+    if (window.default_metro !== '') load_content_data('nammametro', window.default_metro_id);
     search_init();
 
     create_marker_icons();
@@ -1114,13 +1120,11 @@ function add_history(context, data) {
     window.indic_popstate = false;
 }
 
-function post_content_loaded() {
-}
-
-function collection_init(collection, default_video) {
+function collection_init(collection, default_metro) {
     const [ lang, got_lang ] = LANG_PARAMS;
     window.collection_name = collection;
-    window.default_video = default_video;
+    window.default_metro = DEFAULT_METRO_NAME;
+    window.default_metro_id = 1;
 
     window.map_category = H_STOP;
     window.map_initialized = false;
@@ -1148,12 +1152,6 @@ function collection_init(collection, default_video) {
     sessionStorage.clear();
     window.addEventListener('storage', on_storage_event, false);
     window.addEventListener('popstate', handle_popstate);
-
-    document.addEventListener('DOMContentLoaded', function() {
-        if (document.readyState === "interactive" || document.readyState === "complete" ) {
-            setTimeout(post_content_loaded, 0);
-        }
-    });
 
     transliterator_init();
 
