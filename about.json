@@ -5,16 +5,20 @@
     },
     "stats": [
         {
-            "H": "bus stops",
-            "C": 9449
+            "H": "Bus Stops",
+            "C": 9498
         },
         {
-            "H": "bus routes",
-            "C": 7275
+            "H": "Bus Routes",
+            "C": 7301
         },
         {
-            "H": "metro stations",
+            "H": "Metro Stations",
             "C": 83
+        },
+        {
+            "H": "Updated",
+            "C": "2026-03-16 12:15:21"
         }
     ]
 }
