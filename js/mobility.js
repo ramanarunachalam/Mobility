@@ -424,12 +424,14 @@ async function draw_area_map(c_lat, c_lon) {
         const [ h_name, h_id, h_lat, h_lon ] = window.area_marker_list[i];
         const marker = add_new_marker(h_name, h_id, h_lat, h_lon);
         marker.state = 'fixed';
+        marker.setZIndexOffset(1000);
         if (category === 'busstop') {
             marker.setIcon(window.busstop_marker);
         } else if (category === 'busroute') {
             if (i == 0) marker.setIcon(window.start_stop_marker);
             else if (i == window.area_marker_list.length - 1) marker.setIcon(window.end_stop_marker);
-            else marker.setIcon(window.busstop_marker);
+            else if (window.route_direction === 'DOWN') marker.setIcon(window.busstop_marker_down);
+            else marker.setIcon(window.busstop_marker_up);
         } else if (category === 'nammametro') {
             marker.setIcon(window.nammametro_marker);
         }
@@ -454,6 +456,7 @@ async function draw_area_map(c_lat, c_lon) {
             old_count++;
         } else if (marker.state === 'new') {
             new_count++;
+            marker.setZIndexOffset(-1000);
             if (h_name == H_STOP) marker.setIcon(window.stop_neighbor_marker);
             else if (h_name == H_METRO) marker.setIcon(window.metro_neighbor_marker);
         }
@@ -547,6 +550,8 @@ function create_marker_icons() {
     window.nammametro_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'blue', prefix: 'fa' });
     window.metro_neighbor_marker = L.AwesomeMarkers.icon({ icon: 'subway', markerColor: 'beige', prefix: 'fa' });
     window.busstop_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'blue', prefix: 'fa' });
+    window.busstop_marker_up = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'blue', prefix: 'fa' });
+    window.busstop_marker_down = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'red', prefix: 'fa' });
     window.stop_neighbor_marker = L.AwesomeMarkers.icon({ icon: 'bus', markerColor: 'purple', prefix: 'fa' });
     window.start_stop_marker = L.AwesomeMarkers.icon({ icon: 'play-circle-o', markerColor: 'orange', prefix: 'fa' });
     window.end_stop_marker = L.AwesomeMarkers.icon({ icon: 'stop-circle', markerColor: 'green', prefix: 'fa' });
@@ -620,13 +625,18 @@ function render_content_data(category, h_id, video_data, context_list) {
         for (const obj of data_list[h_id]['routes']) {
             const route_id = obj['id'];
             r_text = get_phonetic_text('busroute', route_id);
-            obj['N'] = r_text.split(' : ')[1];
+            const r_parts = r_text.split(' : ');
+            obj['N'] = r_parts[1];
             obj['T'] = obj['time'];
-            obj['R'] = r_text.split(' : ')[0];
+            obj['R'] = r_parts[0];
+            obj['DIR'] = r_parts[2];
+            obj['DI'] = (r_parts[2] === 'UP') ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
             route_obj = route_data['data'][route_id]['info'];
             new_data['data'].push(obj);
         }
     } else if (category === 'busroute') {
+        const r_text = get_phonetic_text('busroute', h_id);
+        window.route_direction = r_text.split(' : ')[2];
         const data_list = video_data['data'];
         for (const obj of data_list[h_id]) {
             const stop_id = obj['id'];
@@ -686,9 +696,11 @@ function form_submit() {
     const end_hour = document.getElementById('endhour');
     const end_min = document.getElementById('endmin');
     const [ sh, sm, eh, em ] = [ +start_hour.value, +start_min.value, +end_hour.value, +end_min.value ]; 
+    const start_total_min = sh * 60 + sm;
+    const end_total_min = eh * 60 + em;
     // console.log(sh, sm, eh, em);
 
-    const html_str = "<tr><th>Time</th><th>Route</th><th>Origin &#x21D4; Destination</th></tr> {{#data}} <tr><td>{{T}}</td><td>{{R}}</td><td><em>{{N}}</em></td></tr> {{/data}}";
+    const html_str = "<tr><th>Time</th><th>Route</th><th>Origin &#x21D4; Destination</th></tr> {{#data}} <tr><td>{{T}}</td><td>{{R}} <i class=\"bi {{DI}}\"></i></td><td><em>{{N}}</em></td></tr> {{/data}}";
 
     const h_id = window.CONTENT_NAME;
     const route_data = window.ROUTE_DATA;
@@ -701,12 +713,15 @@ function form_submit() {
         var [h, m, s] = t.split(':');
         h = parseInt(h);
         m = parseInt(m);
-        if ((h < sh) || (h > eh)) continue; 
-        if ((m < sm) || (m > em)) continue; 
+        const total_min = h * 60 + m;
+        if ((total_min < start_total_min) || (total_min > end_total_min)) continue;
         obj['T'] = t;
         r_text = get_phonetic_text('busroute', route_id);
-        obj['N'] = r_text.split(' : ')[1];
-        obj['R'] = r_text.split(' : ')[0];
+        const r_parts = r_text.split(' : ');
+        obj['N'] = r_parts[1];
+        obj['R'] = r_parts[0];
+        obj['DIR'] = r_parts[2];
+        obj['DI'] = (r_parts[2] === 'UP') ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
         route_obj = route_data['data'][route_id]['info'];
         data['data'].push(obj);
     }
@@ -1165,4 +1180,3 @@ function collection_init(collection, default_metro) {
                      ];
     Promise.all(url_list).then((data_set_list) => { load_init_data(data_set_list); });
 }
-
