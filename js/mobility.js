@@ -282,7 +282,7 @@ function render_nav_template(category, data) {
         for (const h_id of id_list) {
             let [h_text, f_text] = id_data[h_id];
             const n_text = get_phonetic_text(category, h_id);
-            const item = { I: h_id, H: h_text, N: n_text };
+            const item = { V: h_id, H: h_text, N: n_text };
             item_list.push(item);
         }
         new_letter_dict['items'] = item_list;
