@@ -17379,7 +17379,7 @@
             "37": "Kengeri",
             "38": "Kengeri Bus Terminal",
             "39": "Konanakunte Cross",
-            "40": "Krantivira Sangolli Rayanna",
+            "40": "Krantivira Sangolli Rayanna Railway Station",
             "41": "Krishna Rajendra Market",
             "42": "Krishnarajapura",
             "43": "Kudlu Gate",
@@ -17500,7 +17500,10 @@
             "Year": "Year",
             "Years": "Years",
             "Movie": "Movie",
-            "Movies": "Movies"
+            "Movies": "Movies",
+            "busstop": "Bus Stop",
+            "busroute": "Bus Route",
+            "nammametro": "Namma Metro"
         },
         "month": {
             "Jan": "Jan",
