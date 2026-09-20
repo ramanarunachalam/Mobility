@@ -17471,7 +17471,7 @@
             "Sahitya": "ਸਾਹਿਤ",
             "Melakartha": "ਮੇਲ਼ਕਰ੍ਤਾ",
             "Gharana": "ਘਰਾਨਾ",
-            "Thaat": "ਕਿ",
+            "Thaat": "ਥਾਟ",
             "Arohana": "ਆਰੋਹੀ",
             "Avarohana": "ਅਵਰੋਹੀ",
             "Swaras": "ਸਵਰ",
@@ -17503,7 +17503,9 @@
             "Movies": "ਫ਼ਿਲਮਾਂ",
             "busstop": "ਬੱਸ ਅੱਡਾ",
             "busroute": "ਬੱਸ ਦਾ ਰਸਤਾ",
-            "nammametro": "ਨੰਮਾ ਮੈਟਰੋ"
+            "nammametro": "ਨੰਮਾ ਮੈਟਰੋ",
+            "Track Me": "ਮੈਨੂੰ ਟ੍ਰੈਕ ਕਰੋ",
+            "Bengaluru Mobility": "ਬੈਂਗਲੁਰੂ ਮੋਬਿਲਿਟੀ"
         },
         "month": {
             "Jan": "ਜਨਵਰੀ",

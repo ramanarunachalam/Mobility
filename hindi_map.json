@@ -17503,7 +17503,9 @@
             "Movies": "चलचित्र",
             "busstop": "बस स्थानक / बस अड्डा",
             "busroute": "बस मार्ग",
-            "nammametro": "नम्मा मेट्रो"
+            "nammametro": "नम्मा मेट्रो",
+            "Track Me": "मुझे ट्रैक करें",
+            "Bengaluru Mobility": "बेंगलुरु मोबिलिटी"
         },
         "month": {
             "Jan": "जनवरी",

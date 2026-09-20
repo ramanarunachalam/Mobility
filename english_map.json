@@ -17503,7 +17503,9 @@
             "Movies": "Movies",
             "busstop": "Bus Stop",
             "busroute": "Bus Route",
-            "nammametro": "Namma Metro"
+            "nammametro": "Namma Metro",
+            "Track Me": "Track Me",
+            "Bengaluru Mobility": "Bengaluru Mobility"
         },
         "month": {
             "Jan": "Jan",
