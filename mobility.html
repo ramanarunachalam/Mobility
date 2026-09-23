@@ -187,14 +187,14 @@
         {{/title}}
         {{/picker}}
         <div class="col-auto">
-          <button type="button" class="btn btn-light" onclick="form_submit();">Filter</button>
+          <button type="button" class="btn btn-light" onclick="form_submit();">{{FILTER}}</button>
         </div>
       </form>
 
       <div class="px-4 py-2 SCROLL_TABLE">
         <table border="0" cellpadding="0" class="table table-bordered table-hover table-condensed w-auto" >
           <tbody id="time_table">
-            <tr><th>Time</th><th>Route</th><th>Origin &#x21D4; Destination</th></tr>
+            <tr><th>{{TIME_HEADER}}</th><th>{{ROUTE_HEADER}}</th><th>{{ORIGIN_DEST_HEADER}}</th></tr>
             {{#data}}
             <tr><td>{{T}}</td><td>{{R}} <i class="bi {{DI}}"></i></td><td><em>{{N}}</em></td></tr>
             {{/data}}
@@ -213,7 +213,7 @@
         <div class="col-5 SCROLL_TABLE">
           <table border="0" cellpadding="0" class="table table-bordered table-hover table-condensed w-auto" >
             <tbody>
-              <tr><th>No.</th><th>Name</th><th>Time</th></tr>
+              <tr><th>{{NO_HEADER}}</th><th>{{NAME_HEADER}}</th><th>{{TIME_HEADER}}</th></tr>
               {{#data}}
               <tr><td>{{S}}</td><td><em>{{N}}</em></td><td>{{T}}</td></tr>
               {{/data}}
@@ -223,10 +223,10 @@
         <div class="col-2">
           <table border="0" cellpadding="0" class="table table-bordered table-hover table-condensed w-auto" >
             <tbody>
-            <tr><th>Stops</th><td>{{S}}</td> </tr>
-            <tr><th>Trips</th><td>{{F}}</td> </tr>
+            <tr><th>{{STOPS_LABEL}}</th><td>{{S}}</td> </tr>
+            <tr><th>{{TRIPS_LABEL}}</th><td>{{F}}</td> </tr>
             <tr>
-              <th>Time</th>
+              <th>{{TIME_HEADER}}</th>
               <td>
                 <div class="dropdown">
                   <a class="dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button" aria-expanded="false">{{ST}}</a>
@@ -334,4 +334,3 @@
 
 </body>
 </html>
-

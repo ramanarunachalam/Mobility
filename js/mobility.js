@@ -152,14 +152,18 @@ function on_storage_event(storageEvent) {
 }
 
 function get_lang_text(name, category, h_id) {
-    if (name === 'map' && category === 'info') return h_id;
+    const category_data = window.LANG_DATA && window.LANG_DATA[name] && window.LANG_DATA[name][category];
+    const text = category_data ? category_data[h_id] : undefined;
+    if (text !== undefined) return text;
     if (name === 'phonetic') {
-        const id_data = window.ID_DATA[category];
-        return id_data[h_id][0];
+        // No translation for this specific stop/route/station — fall
+        // back to its English name rather than showing nothing.
+        const id_data = window.ID_DATA && window.ID_DATA[category];
+        return (id_data && id_data[h_id]) ? id_data[h_id][0] : h_id;
     }
-    return name;
-    //const category_data = window.LANG_DATA[name][category];
-    // return category_data[h_id];
+    // map/info: no entry for this key in the current language's
+    // map.json yet — fall back to the literal key itself.
+    return h_id;
 }
 
 function get_phonetic_text(category, h_id) {
@@ -182,14 +186,17 @@ function get_month_text(value) {
 }
 
 function load_menu_data(lang, nav_category) {
-    /*
     transliterator_lang_init(lang);
     const item_list = CATEGORY_DICT['categories'];
     for (const obj of item_list) {
-        const name = capitalize_word(obj['C']);
-        obj['N'] = get_map_text('info', name);
+        // get_map_text falls back to the literal key (obj['C'], e.g.
+        // "busstop") when the current language's map.json doesn't have
+        // this entry yet — comparing against that lets a missing
+        // translation keep the nicer built-in English default ("Bus
+        // Stop") instead of showing the raw lowercase id.
+        const translated = get_map_text('info', obj['C']);
+        obj['N'] = (translated !== obj['C']) ? translated : obj['N'];
     }
-    */
 
     const search = get_map_text('info', 'Search');
     const lang_map_dict = window.LANG_DATA['map']['language'];
@@ -383,11 +390,17 @@ function render_data_template(category, id, data, context_list) {
     if (category === '') return;
     const template_name = `page-${category}-template`;
     if (category === 'busstop') {
+        const start_text = get_map_text('info', 'Start');
+        const end_text = get_map_text('info', 'End');
         data['picker'] = [];
-        data['picker'].push({ 'name' : 'starthour', 'title' : { 'value' : 'Start' }, 'options' : get_opt_value('Start', 24) });
+        data['picker'].push({ 'name' : 'starthour', 'title' : { 'value' : start_text }, 'options' : get_opt_value('Start', 24) });
         data['picker'].push({ 'name' : 'startmin', 'options' : get_opt_value('Start', 60) });
-        data['picker'].push({ 'name' : 'endhour', 'title' : { 'value' : 'End' }, 'options' : get_opt_value('End', 24) });
+        data['picker'].push({ 'name' : 'endhour', 'title' : { 'value' : end_text }, 'options' : get_opt_value('End', 24) });
         data['picker'].push({ 'name' : 'endmin', 'options' : get_opt_value('End', 60) });
+        data['FILTER'] = get_map_text('info', 'Filter');
+        data['TIME_HEADER'] = get_map_text('info', 'Time');
+        data['ROUTE_HEADER'] = get_map_text('info', 'Route');
+        data['ORIGIN_DEST_HEADER'] = `${get_map_text('info', 'Origin')} \u21D4 ${get_map_text('info', 'Destination')}`;
     }
     let ul_template = plain_get_html_text(template_name);
     const template_html = Mustache.render(ul_template, data);
@@ -658,6 +671,11 @@ function render_content_data(category, h_id, video_data, context_list) {
         new_data['ST'] = time_list[window.CONTENT_INDEX]['N'];
         new_data['S'] = data_list[h_id].length;
         new_data['F'] = time_list.length;
+        new_data['NO_HEADER'] = get_map_text('info', 'No.');
+        new_data['NAME_HEADER'] = get_map_text('info', 'Name');
+        new_data['TIME_HEADER'] = get_map_text('info', 'Time');
+        new_data['STOPS_LABEL'] = get_map_text('info', 'Stops');
+        new_data['TRIPS_LABEL'] = get_map_text('info', 'Trips');
     }
     render_data_template(category, 'PAGE_DATA', new_data, context_list);
 
@@ -799,8 +817,9 @@ function get_search_results(search_word, search_options, item_list, id_list, bas
         pop = base_pop + pop;
         const category = result_item.category
         const id_data = window.ID_DATA[category];
-        const c_name = capitalize_word(category);
-        const n_category = (lang === 'English') ? category.toUpperCase() : get_map_text('info', c_name);
+        const translated_category = get_map_text('info', category);
+        const n_category = (lang === 'English' || translated_category === category)
+            ? category.toUpperCase() : translated_category;
         const href = result_item.href;
         const title = get_phonetic_text(category, result_item.href);
         const item = { 'T' : category, 'C' : n_category, 'I' : MENU_ICON_DICT[category],
